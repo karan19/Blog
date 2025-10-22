@@ -82,8 +82,6 @@ export class GhostInfraStack extends Stack {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.SMALL),
       deletionProtection: false,
       backupRetention: Duration.days(7),
-      enablePerformanceInsights: true,
-      performanceInsightRetention: rds.PerformanceInsightRetention.DEFAULT,
       monitoringInterval: Duration.seconds(60),
       cloudwatchLogsExports: ["error", "general", "slowquery"]
     });
