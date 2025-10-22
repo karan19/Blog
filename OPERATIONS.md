@@ -4,7 +4,7 @@
 
 | Resource | Status | Notes |
 |----------|--------|-------|
-| RDS (`ghostinfrastack-mysql…`) | Backup retention 7 days, Performance Insights + enhanced monitoring enabled | Still single-AZ / unencrypted (dev default). Increase retention or enable encryption as needed. |
+| RDS (`ghostinfrastack-mysql…`) | Backup retention 7 days, enhanced monitoring enabled (PI/Log exports disabled on t4g.small) | Still single-AZ / unencrypted (dev default). Increase retention or enable encryption as needed. |
 | S3 Media Bucket | Versioning + SSE-S3 encryption enforced | Supports rollbacks; HTTPS-only enforced. |
 | CloudWatch Logs | Log group `GhostInfraStack-GhostLogs42350297-yG1J1bF43DL9` (731-day retention) | ECS task logs available via CloudWatch console. |
 | ALB Access Logs | Bucket `${AlbLogsBucketName}` | Enabled for request troubleshooting. |

@@ -42,16 +42,17 @@ export class GhostInfraStack extends Stack {
     const vpc = new ec2.Vpc(this, "Vpc", { maxAzs: 2, natGateways: 1 });
 
     const mediaBucket = new s3.Bucket(this, "MediaBucket", {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_PUBLIC_POLICY,
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true
     });
 
     const cfLogsBucket = new s3.Bucket(this, "CloudFrontLogs", {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_PUBLIC_POLICY,
       encryption: s3.BucketEncryption.S3_MANAGED,
-      enforceSSL: true
+      enforceSSL: true,
+      accessControl: s3.BucketAccessControl.LOG_DELIVERY_WRITE
     });
 
     const mediaDistro = new cf.Distribution(this, "MediaCdn", {
@@ -82,8 +83,7 @@ export class GhostInfraStack extends Stack {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.SMALL),
       deletionProtection: false,
       backupRetention: Duration.days(7),
-      monitoringInterval: Duration.seconds(60),
-      cloudwatchLogsExports: ["error", "general", "slowquery"]
+      monitoringInterval: Duration.seconds(60)
     });
 
     const zone = r53.HostedZone.fromLookup(this, "Zone", { domainName: props.hostedZoneDomain });
@@ -105,9 +105,10 @@ export class GhostInfraStack extends Stack {
     });
 
     const albLogsBucket = new s3.Bucket(this, "AlbLogs", {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_PUBLIC_POLICY,
       encryption: s3.BucketEncryption.S3_MANAGED,
-      enforceSSL: true
+      enforceSSL: true,
+      accessControl: s3.BucketAccessControl.LOG_DELIVERY_WRITE
     });
 
     alb.logAccessLogs(albLogsBucket);
