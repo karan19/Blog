@@ -41,15 +41,22 @@ export class GhostInfraStack extends Stack {
 
     const vpc = new ec2.Vpc(this, "Vpc", { maxAzs: 2, natGateways: 1 });
 
+    const logDeliveryFriendlyAccess = new s3.BlockPublicAccess({
+      blockPublicAcls: false,
+      ignorePublicAcls: false,
+      blockPublicPolicy: true,
+      restrictPublicBuckets: true
+    });
+
     const mediaBucket = new s3.Bucket(this, "MediaBucket", {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_PUBLIC_POLICY,
+      blockPublicAccess: logDeliveryFriendlyAccess,
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true
     });
 
     const cfLogsBucket = new s3.Bucket(this, "CloudFrontLogs", {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_PUBLIC_POLICY,
+      blockPublicAccess: logDeliveryFriendlyAccess,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       accessControl: s3.BucketAccessControl.LOG_DELIVERY_WRITE
@@ -105,7 +112,7 @@ export class GhostInfraStack extends Stack {
     });
 
     const albLogsBucket = new s3.Bucket(this, "AlbLogs", {
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_PUBLIC_POLICY,
+      blockPublicAccess: logDeliveryFriendlyAccess,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       accessControl: s3.BucketAccessControl.LOG_DELIVERY_WRITE
