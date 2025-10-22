@@ -21,11 +21,39 @@ jobs:
           cd theme
           zip -r ../theme.zip .
 
+      - name: Generate Ghost Admin JWT
+        id: jwt
+        env:
+          ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_TOKEN }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const [id, secret] = process.env.ADMIN_API_KEY.split(':');
+          const base64url = (input) => Buffer.from(JSON.stringify(input))
+            .toString('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+          const now = Math.floor(Date.now() / 1000);
+          const header = { alg: 'HS256', kid: id, typ: 'JWT' };
+          const payload = { iat: now, exp: now + 300, aud: '/admin/' };
+          const unsigned = `${base64url(header)}.${base64url(payload)}`;
+          const signature = crypto
+            .createHmac('sha256', Buffer.from(secret, 'hex'))
+            .update(unsigned)
+            .digest('base64')
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+          const token = `${unsigned}.${signature}`;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `jwt=${token}\n`);
+          NODE
+
       - name: Upload to Ghost Admin
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
-          GHOST_ADMIN_TOKEN: ${{ secrets.GHOST_ADMIN_TOKEN }}
         run: |
           curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/?activate=true" \
-            -H "Authorization: Ghost $GHOST_ADMIN_TOKEN" \
+            -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
             -F "file=@theme.zip"
