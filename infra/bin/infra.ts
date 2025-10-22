@@ -1,18 +1,25 @@
 #!/usr/bin/env node
-import { App } from 'aws-cdk-lib';
-import { GhostInfraStack } from '../lib/infra-stack';
+import { App } from "aws-cdk-lib";
+import { GhostInfraStack } from "../lib/ghost-infra-stack";
 
 const app = new App();
 
-const region = process.env.CDK_DEFAULT_REGION || 'us-west-2';
-const account = process.env.CDK_DEFAULT_ACCOUNT!;
-const env = { account, region };
+// Safe defaults with clear overrides
+const REGION = process.env.CDK_DEFAULT_REGION ?? "us-west-2";
+const ACCOUNT = process.env.CDK_DEFAULT_ACCOUNT;
+if (!ACCOUNT) throw new Error("CDK_DEFAULT_ACCOUNT missing. Set AWS credentials.");
 
-const HOSTED_ZONE = process.env.HOSTED_ZONE || 'karankan19.com';
-const BLOG_DOMAIN = process.env.BLOG_SUBDOMAIN || 'blog.karankan19.com';
+const HOSTED_ZONE = process.env.HOSTED_ZONE ?? "karankan19.com";
+const BLOG_SUBDOMAIN = process.env.BLOG_SUBDOMAIN ?? `blog.${HOSTED_ZONE}`;
+const SES_FROM_EMAIL = process.env.SES_FROM_EMAIL ?? `no-reply@${HOSTED_ZONE}`;
+const ECR_REPO_NAME = process.env.ECR_REPO_NAME ?? "ghost-repo";
+const IMAGE_TAG = process.env.IMAGE_TAG ?? "latest"; // image tag to run
 
-new GhostInfraStack(app, 'GhostInfra', {
-  env,
+new GhostInfraStack(app, "GhostInfraStack", {
+  env: { account: ACCOUNT, region: REGION },
   hostedZoneDomain: HOSTED_ZONE,
-  blogDomain: BLOG_DOMAIN
+  blogDomain: BLOG_SUBDOMAIN,
+  sesFromEmail: SES_FROM_EMAIL,
+  ecrRepoName: ECR_REPO_NAME,
+  imageTag: IMAGE_TAG
 });
