@@ -1,0 +1,3 @@
+# Ignore theme dependencies and build artifacts
+theme/node_modules/
+theme/.nyc_output/
