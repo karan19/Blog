@@ -6,13 +6,14 @@ This repository now uses the **Headline** Ghost theme (downloaded from https://g
 
 1. Download the latest `Headline-*.zip` from Ghost.
 2. Replace the contents of the `theme/` directory with the latest Headline files (keep the folder named `theme` in git).
-3. Commit and push your changes:
+3. Bump the version in `theme/package.json` (for example `npm version patch`).
+4. Commit and push your changes:
    ```bash
    git add theme
    git commit -m "chore(theme): update Headline"
    git push
    ```
-4. GitHub Actions triggers `.github/workflows/theme-deploy.yml`, which uploads the theme and activates it automatically.
+5. GitHub Actions triggers `.github/workflows/theme-deploy.yml`, which uploads the theme and activates it automatically.
 
 ## Local development notes
 

@@ -59,10 +59,12 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           THEME_NAME: headline-blog
         run: |
-          curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/?overwrite=true" \
+          curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/" \
             -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
+            -H "Accept-Version: v5.0" \
             -F "file=@theme.zip"
           curl -fSs -X PUT "$GHOST_ADMIN_URL/ghost/api/admin/themes/${THEME_NAME}/activate/" \
             -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
+            -H "Accept-Version: v5.0" \
             -H "Content-Type: application/json" \
             -d '{}'
