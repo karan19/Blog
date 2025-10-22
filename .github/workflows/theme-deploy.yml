@@ -50,10 +50,15 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `jwt=${token}\n`);
           NODE
 
-      - name: Upload to Ghost Admin
+      - name: Upload and activate theme
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          THEME_NAME: headline
         run: |
-          curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/?activate=true" \
+          curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/" \
             -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
             -F "file=@theme.zip"
+          curl -fSs -X PUT "$GHOST_ADMIN_URL/ghost/api/admin/themes/${THEME_NAME}/activate/" \
+            -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
