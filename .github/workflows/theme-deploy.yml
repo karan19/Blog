@@ -57,7 +57,7 @@ jobs:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
           THEME_NAME: headline
         run: |
-          curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/" \
+          curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/?overwrite=true" \
             -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
             -F "file=@theme.zip"
           curl -fSs -X PUT "$GHOST_ADMIN_URL/ghost/api/admin/themes/${THEME_NAME}/activate/" \
