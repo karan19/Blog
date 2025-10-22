@@ -1,0 +1,53 @@
+name: cdk-infra-deploy
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra-deploy.yml"
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  HOSTED_ZONE: ${{ vars.HOSTED_ZONE }}
+  BLOG_SUBDOMAIN: ${{ vars.BLOG_SUBDOMAIN }}
+  SES_FROM_EMAIL: ${{ vars.SES_FROM_EMAIL }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ vars.IMAGE_TAG_LATEST }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CDK deploy GhostInfraStack
+        working-directory: infra
+        env:
+          HOSTED_ZONE: ${{ env.HOSTED_ZONE }}
+          BLOG_SUBDOMAIN: ${{ env.BLOG_SUBDOMAIN }}
+          SES_FROM_EMAIL: ${{ env.SES_FROM_EMAIL }}
+          ECR_REPO_NAME: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        run: |
+          npm ci
+          HOSTED_ZONE="$HOSTED_ZONE" \
+          BLOG_SUBDOMAIN="$BLOG_SUBDOMAIN" \
+          SES_FROM_EMAIL="$SES_FROM_EMAIL" \
+          ECR_REPO_NAME="$ECR_REPO_NAME" \
+          IMAGE_TAG="${IMAGE_TAG:-latest}" \
+          npx cdk deploy GhostInfraStack --require-approval never

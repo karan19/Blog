@@ -1,0 +1,16 @@
+{
+  "availability-zones:account=654654148983:region=us-west-2": [
+    "us-west-2a",
+    "us-west-2b",
+    "us-west-2c",
+    "us-west-2d"
+  ],
+  "hosted-zone:account=654654148983:domainName=karankan19.com:region=us-west-2": {
+    "Id": "/hostedzone/Z04253271Z3Y5QK2QPX13",
+    "Name": "karankan19.com."
+  },
+  "hosted-zone:account=654654148983:domainName=karankan19.com:region=us-east-1": {
+    "Id": "/hostedzone/Z04253271Z3Y5QK2QPX13",
+    "Name": "karankan19.com."
+  }
+}

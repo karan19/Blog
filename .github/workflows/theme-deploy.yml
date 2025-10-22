@@ -1,0 +1,31 @@
+name: deploy-theme
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "theme/**"
+      - ".github/workflows/theme-deploy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zip theme
+        run: |
+          cd theme
+          zip -r ../theme.zip .
+
+      - name: Upload to Ghost Admin
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+          GHOST_ADMIN_TOKEN: ${{ secrets.GHOST_ADMIN_TOKEN }}
+        run: |
+          curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/?activate=true" \
+            -H "Authorization: Ghost $GHOST_ADMIN_TOKEN" \
+            -F "file=@theme.zip"
