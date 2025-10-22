@@ -1,89 +1,42 @@
 {
-    "name": "casper",
-    "description": "A clean, minimal default theme for the Ghost publishing platform",
-    "demo": "https://demo.ghost.io",
-    "version": "5.9.0",
+    "name": "headline",
+    "description": "A Ghost theme",
+    "version": "1.0.0",
+    "private": true,
     "engines": {
         "ghost": ">=5.0.0"
     },
     "license": "MIT",
-    "screenshots": {
-        "desktop": "assets/screenshot-desktop.jpg",
-        "mobile": "assets/screenshot-mobile.jpg"
-    },
-    "scripts": {
-        "dev": "gulp",
-        "zip": "gulp zip",
-        "test": "gscan .",
-        "test:ci": "gscan --fatal --verbose .",
-        "pretest": "gulp build",
-        "preship": "yarn test",
-        "ship": "STATUS=$(git status --porcelain); echo $STATUS; if [ -z \"$STATUS\" ]; then yarn version && git push --follow-tags; else echo \"Uncomitted changes found.\" && exit 1; fi",
-        "postship": "git fetch && gulp release"
-    },
     "author": {
         "name": "Ghost Foundation",
         "email": "hello@ghost.org",
-        "url": "https://ghost.org/"
-    },
-    "gpm": {
-        "type": "theme",
-        "categories": [
-            "Minimal",
-            "Magazine"
-        ]
+        "url": "https://ghost.org"
     },
     "keywords": [
         "ghost",
         "theme",
         "ghost-theme"
     ],
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/TryGhost/Casper.git"
-    },
-    "bugs": "https://github.com/TryGhost/Casper/issues",
-    "contributors": "https://github.com/TryGhost/Casper/graphs/contributors",
-    "devDependencies": {
-        "@tryghost/release-utils": "0.8.1",
-        "autoprefixer": "10.4.7",
-        "beeper": "2.1.0",
-        "cssnano": "5.1.12",
-        "gscan": "4.49.1",
-        "gulp": "4.0.2",
-        "gulp-concat": "2.6.1",
-        "gulp-livereload": "4.0.2",
-        "gulp-postcss": "9.0.1",
-        "gulp-uglify": "3.0.2",
-        "gulp-zip": "5.1.0",
-        "inquirer": "8.2.4",
-        "postcss": "8.2.13",
-        "postcss-color-mod-function": "3.0.3",
-        "postcss-easy-import": "4.0.0",
-        "pump": "3.0.0"
-    },
-    "browserslist": [
-        "defaults"
-    ],
+    "docs": "https://headline.ghost.io/about/",
     "config": {
-        "posts_per_page": 25,
+        "posts_per_page": 7,
         "image_sizes": {
-            "xxs": {
-                "width": 30
-            },
             "xs": {
-                "width": 100
+                "width": 150
             },
             "s": {
                 "width": 300
             },
             "m": {
-                "width": 600
+                "width": 720
             },
             "l": {
-                "width": 1000
+                "width": 960
             },
             "xl": {
+                "width": 1200
+            },
+            "xxl": {
                 "width": 2000
             }
         },
@@ -91,89 +44,64 @@
         "custom": {
             "navigation_layout": {
                 "type": "select",
-                "options": [
-                    "Logo on cover",
-                    "Logo in the middle",
-                    "Stacked"
-                ],
-                "default": "Logo on cover"
+                "options": ["Logo on the left", "Logo in the middle", "Stacked"],
+                "default": "Stacked"
+            },
+            "header_style": {
+                "type": "select",
+                "options": ["Light", "Accent color", "Dark"],
+                "default": "Light"
             },
             "title_font": {
                 "type": "select",
-                "options": [
-                    "Modern sans-serif",
-                    "Elegant serif"
-                ],
+                "options": ["Modern sans-serif", "Elegant serif"],
                 "default": "Modern sans-serif"
             },
             "body_font": {
                 "type": "select",
-                "options": [
-                    "Modern sans-serif",
-                    "Elegant serif"
-                ],
+                "options": ["Modern sans-serif", "Elegant serif"],
                 "default": "Elegant serif"
             },
-            "show_publication_cover": {
-                "type": "boolean",
-                "default": true,
-                "group": "homepage"
-            },
-            "header_style": {
-                "type": "select",
-                "options": [
-                    "Center aligned",
-                    "Left aligned",
-                    "Hidden"
-                ],
-                "default": "Center aligned",
-                "group": "homepage"
-            },
-            "feed_layout": {
-                "type": "select",
-                "options": [
-                    "Classic",
-                    "Grid",
-                    "List"
-                ],
-                "default": "Classic",
-                "group": "homepage"
-            },
-            "color_scheme": {
-                "type": "select",
-                "options": [
-                    "Light",
-                    "Dark",
-                    "Auto"
-                ],
-                "default": "Light"
-            },
-            "post_image_style": {
-                "type": "select",
-                "options": [
-                    "Wide",
-                    "Full",
-                    "Small",
-                    "Hidden"
-                ],
-                "default": "Wide",
-                "group": "post"
+            "white_publication_logo_for_transparent_header": {
+                "type": "image"
             },
             "email_signup_text": {
                 "type": "text",
-                "default": "Sign up for more like this.",
-                "group": "post"
+                "default": "Don't miss out on the latest news. Sign up now to get access to the library of members-only articles."
             },
-            "show_recent_posts_footer": {
-                "type": "boolean",
-                "default": true,
-                "group": "post"
+            "footer_text": {
+                "type": "text"
+            },
+            "enter_tag_slugs_for_primary_sections": {
+                "type": "text",
+                "group": "homepage"
+            },
+            "enter_tag_slugs_for_secondary_sections": {
+                "type": "text",
+                "group": "homepage"
             }
         }
     },
-    "renovate": {
-        "extends": [
-            "@tryghost:theme"
-        ]
+    "scripts": {
+        "dev": "gulp",
+        "test": "gscan .",
+        "zip": "gulp zip"
+    },
+    "devDependencies": {
+        "@tryghost/shared-theme-assets": "2.5.0",
+        "autoprefixer": "10.4.21",
+        "beeper": "2.1.0",
+        "cssnano": "7.1.1",
+        "gscan": "5.1.0",
+        "gulp": "5.0.1",
+        "gulp-concat": "2.6.1",
+        "gulp-livereload": "4.0.2",
+        "gulp-postcss": "10.0.0",
+        "gulp-uglify": "3.0.2",
+        "gulp-zip": "5.1.0",
+        "ordered-read-streams": "2.0.0",
+        "postcss": "8.5.6",
+        "postcss-easy-import": "4.0.0",
+        "pump": "3.0.3"
     }
 }
