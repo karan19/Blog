@@ -52,24 +52,10 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `jwt=${token}\n`);
           NODE
 
-      - name: Remove existing theme (if present)
-        env:
-          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
-          THEME_NAME: headline
-        run: |
-          STATUS=$(curl -s -o /tmp/delete_theme.txt -w "%{http_code}" -X DELETE "$GHOST_ADMIN_URL/ghost/api/admin/themes/${THEME_NAME}/" \
-            -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
-            -H "Content-Type: application/json" || true)
-          if [ "$STATUS" != "204" ] && [ "$STATUS" != "200" ] && [ "$STATUS" != "404" ]; then
-            echo "Unexpected status while deleting theme: $STATUS" >&2
-            cat /tmp/delete_theme.txt >&2
-            exit 1
-          fi
-
       - name: Upload and activate theme
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
-          THEME_NAME: headline
+          THEME_NAME: headline-blog
         run: |
           curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/?overwrite=true" \
             -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
