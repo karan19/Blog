@@ -14,6 +14,7 @@ const BLOG_SUBDOMAIN = process.env.BLOG_SUBDOMAIN ?? `blog.${HOSTED_ZONE}`;
 const SES_FROM_EMAIL = process.env.SES_FROM_EMAIL ?? `no-reply@${HOSTED_ZONE}`;
 const ECR_REPO_NAME = process.env.ECR_REPO_NAME ?? "ghost-repo";
 const IMAGE_TAG = process.env.IMAGE_TAG ?? "latest"; // image tag to run
+const OPS_ALERT_EMAIL = process.env.OPS_ALERT_EMAIL ?? SES_FROM_EMAIL;
 
 new GhostInfraStack(app, "GhostInfraStack", {
   env: { account: ACCOUNT, region: REGION },
@@ -21,5 +22,6 @@ new GhostInfraStack(app, "GhostInfraStack", {
   blogDomain: BLOG_SUBDOMAIN,
   sesFromEmail: SES_FROM_EMAIL,
   ecrRepoName: ECR_REPO_NAME,
-  imageTag: IMAGE_TAG
+  imageTag: IMAGE_TAG,
+  opsAlertEmail: OPS_ALERT_EMAIL
 });

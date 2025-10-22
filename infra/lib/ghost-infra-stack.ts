@@ -14,7 +14,11 @@ import {
   aws_ecs as ecs,
   aws_logs as logs,
   aws_iam as iam,
-  aws_ssm as ssm
+  aws_ssm as ssm,
+  aws_cloudwatch as cw,
+  aws_cloudwatch_actions as cw_actions,
+  aws_sns as sns,
+  aws_sns_subscriptions as subs
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { CertificateStack } from "./certificate-stack";
@@ -25,6 +29,7 @@ interface Props extends StackProps {
   sesFromEmail: string;
   ecrRepoName: string;
   imageTag: string;
+  opsAlertEmail: string;
 }
 
 export class GhostInfraStack extends Stack {
@@ -38,14 +43,24 @@ export class GhostInfraStack extends Stack {
 
     const mediaBucket = new s3.Bucket(this, "MediaBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      versioned: true
+      versioned: true,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true
+    });
+
+    const cfLogsBucket = new s3.Bucket(this, "CloudFrontLogs", {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true
     });
 
     const mediaDistro = new cf.Distribution(this, "MediaCdn", {
       defaultBehavior: {
         origin: new origins.S3Origin(mediaBucket),
         viewerProtocolPolicy: cf.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
-      }
+      },
+      enableLogging: true,
+      logBucket: cfLogsBucket
     });
 
     const dbSecret = new sm.Secret(this, "DbSecret", {
@@ -65,7 +80,12 @@ export class GhostInfraStack extends Stack {
       allocatedStorage: 50,
       multiAz: false,
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.SMALL),
-      deletionProtection: false
+      deletionProtection: false,
+      backupRetention: Duration.days(7),
+      enablePerformanceInsights: true,
+      performanceInsightRetention: rds.PerformanceInsightRetention.DEFAULT,
+      monitoringInterval: Duration.seconds(60),
+      cloudwatchLogsExports: ["error", "general", "slowquery"]
     });
 
     const zone = r53.HostedZone.fromLookup(this, "Zone", { domainName: props.hostedZoneDomain });
@@ -85,6 +105,14 @@ export class GhostInfraStack extends Stack {
       vpc,
       internetFacing: true
     });
+
+    const albLogsBucket = new s3.Bucket(this, "AlbLogs", {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true
+    });
+
+    alb.logAccessLogs(albLogsBucket);
 
     const http = alb.addListener("Http", { port: 80, open: true });
     http.addAction("RedirectToHttps", {
@@ -112,17 +140,45 @@ export class GhostInfraStack extends Stack {
     const taskRole = new iam.Role(this, "TaskRole", {
       assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com")
     });
-    mediaBucket.grantReadWrite(taskRole);
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        "s3:GetBucketLocation",
+        "s3:ListBucket"
+      ],
+      resources: [mediaBucket.bucketArn]
+    }));
+
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:AbortMultipartUpload",
+        "s3:PutObjectTagging",
+        "s3:GetObjectTagging"
+      ],
+      resources: [`${mediaBucket.bucketArn}/content/*`]
+    }));
+
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParameterHistory"],
+      resources: [
+        `arn:aws:ssm:${this.region}:${this.account}:parameter/ghost/mail/user`,
+        `arn:aws:ssm:${this.region}:${this.account}:parameter/ghost/mail/pass`
+      ]
+    }));
 
     const logGroup = new logs.LogGroup(this, "GhostLogs");
 
     const mailUserParam = new ssm.StringParameter(this, "MailUserParam", {
       parameterName: "/ghost/mail/user",
-      stringValue: "REPLACE_ME"
+      stringValue: "REPLACE_ME",
+      type: ssm.ParameterType.SECURE_STRING
     });
     const mailPassParam = new ssm.StringParameter(this, "MailPassParam", {
       parameterName: "/ghost/mail/pass",
-      stringValue: "REPLACE_ME"
+      stringValue: "REPLACE_ME",
+      type: ssm.ParameterType.SECURE_STRING
     });
 
     const taskDef = new ecs.FargateTaskDefinition(this, "TaskDef", {
@@ -171,7 +227,50 @@ export class GhostInfraStack extends Stack {
       healthCheck: { path: "/", healthyHttpCodes: "200,301,302", interval: Duration.seconds(30) }
     });
 
-    db.connections.allowDefaultPortFrom(ec2.Peer.ipv4(vpc.vpcCidrBlock));
+    db.connections.allowDefaultPortFrom(svc.connections.securityGroups[0]);
+
+    const opsTopic = new sns.Topic(this, "OpsTopic", {
+      displayName: "Ghost Ops Alerts"
+    });
+    opsTopic.addSubscription(new subs.EmailSubscription(props.opsAlertEmail));
+
+    const ecsCpuAlarm = new cw.Alarm(this, "EcsHighCpu", {
+      metric: svc.metricCpuUtilization(),
+      threshold: 70,
+      evaluationPeriods: 5,
+      datapointsToAlarm: 3,
+      comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+    ecsCpuAlarm.addAlarmAction(new cw_actions.SnsAction(opsTopic));
+
+    const alb5xxAlarm = new cw.Alarm(this, "Alb5xxHigh", {
+      metric: alb.metricHttpCodeElb(elbv2.HttpCodeElb.ELB_5XX_COUNT),
+      threshold: 50,
+      evaluationPeriods: 5
+    });
+    alb5xxAlarm.addAlarmAction(new cw_actions.SnsAction(opsTopic));
+
+    const rdsCpuAlarm = new cw.Alarm(this, "RdsHighCpu", {
+      metric: db.metricCPUUtilization(),
+      threshold: 80,
+      evaluationPeriods: 5,
+      comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+    rdsCpuAlarm.addAlarmAction(new cw_actions.SnsAction(opsTopic));
+
+    const rdsStorageAlarm = new cw.Alarm(this, "RdsLowStorage", {
+      metric: db.metricFreeStorageSpace(),
+      threshold: 10 * 1024 * 1024 * 1024,
+      evaluationPeriods: 3,
+      comparisonOperator: cw.ComparisonOperator.LESS_THAN_THRESHOLD
+    });
+    rdsStorageAlarm.addAlarmAction(new cw_actions.SnsAction(opsTopic));
+
+    new r53.TxtRecord(this, "DmarcRecord", {
+      zone,
+      recordName: `_dmarc.${props.hostedZoneDomain}`,
+      values: [`v=DMARC1; p=none; rua=mailto:${props.sesFromEmail}`]
+    });
 
     new CfnOutput(this, "EcsClusterName", { value: cluster.clusterName });
     new CfnOutput(this, "EcsServiceName", { value: svc.serviceName });
@@ -179,5 +278,7 @@ export class GhostInfraStack extends Stack {
     new CfnOutput(this, "MediaDistributionId", { value: mediaDistro.distributionId });
     new CfnOutput(this, "MediaDistributionDomainName", { value: mediaDistro.domainName });
     new CfnOutput(this, "MediaBucketName", { value: mediaBucket.bucketName });
+    new CfnOutput(this, "AlbLogsBucketName", { value: albLogsBucket.bucketName });
+    new CfnOutput(this, "CloudFrontLogsBucketName", { value: cfLogsBucket.bucketName });
   }
 }
