@@ -18,7 +18,7 @@ jobs:
 
       - name: Package theme
         env:
-          THEME_ROOT: headline-blog
+          THEME_ROOT: headline-custom
         run: |
           TEMP_DIR=$(mktemp -d)
           rsync -a theme/ "$TEMP_DIR/${THEME_ROOT}/"
@@ -57,7 +57,7 @@ jobs:
       - name: Upload and activate theme
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
-          THEME_NAME: headline-blog
+          THEME_NAME: headline-custom
         run: |
           curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/" \
             -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
