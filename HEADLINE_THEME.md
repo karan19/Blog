@@ -5,7 +5,7 @@ This repository now uses the **Headline** Ghost theme (downloaded from https://g
 ## How to update the theme
 
 1. Download the latest `Headline-*.zip` from Ghost.
-2. Replace the contents of the `theme/` directory with the fresh theme files (preserving the directory name `theme`).
+2. Replace the contents of the `theme/` directory with the latest Headline files (keep the folder named `theme` in git).
 3. Commit and push your changes:
    ```bash
    git add theme

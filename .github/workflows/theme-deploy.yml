@@ -16,10 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Zip theme
+      - name: Package theme
         run: |
-          cd theme
-          zip -r ../theme.zip .
+          TEMP_DIR=$(mktemp -d)
+          rsync -a theme/ "$TEMP_DIR/headline/"
+          (cd "$TEMP_DIR" && zip -qr "$GITHUB_WORKSPACE/theme.zip" headline)
+          rm -rf "$TEMP_DIR"
 
       - name: Generate Ghost Admin JWT
         id: jwt
