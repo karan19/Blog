@@ -172,13 +172,11 @@ export class GhostInfraStack extends Stack {
 
     const mailUserParam = new ssm.StringParameter(this, "MailUserParam", {
       parameterName: "/ghost/mail/user",
-      stringValue: "REPLACE_ME",
-      type: ssm.ParameterType.SECURE_STRING
+      stringValue: "REPLACE_ME"
     });
     const mailPassParam = new ssm.StringParameter(this, "MailPassParam", {
       parameterName: "/ghost/mail/pass",
-      stringValue: "REPLACE_ME",
-      type: ssm.ParameterType.SECURE_STRING
+      stringValue: "REPLACE_ME"
     });
 
     const taskDef = new ecs.FargateTaskDefinition(this, "TaskDef", {
