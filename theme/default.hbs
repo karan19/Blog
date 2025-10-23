@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{meta_title}}</title>
     <link rel="stylesheet" href="{{asset "built/screen.css"}}">
+    <link rel="icon" type="image/svg+xml" href="{{asset "images/favicon.svg"}}">
 
     {{ghost_head}}
 </head>
@@ -68,34 +69,6 @@
     </header>
 
     {{{body}}}
-
-    <footer class="gh-foot gh-outer">
-        <div class="gh-foot-inner gh-inner">
-            {{#if @site.members_enabled}}
-            {{#unless @member}}
-                <section class="gh-subscribe">
-                    <h3 class="gh-subscribe-title">Subscribe to {{@site.title}}</h3>
-                    {{#if @custom.email_signup_text}}
-                        <div class="gh-subscribe-description">{{@custom.email_signup_text}}</div>
-                    {{/if}}
-                    <button class="gh-subscribe-btn gh-btn" data-portal="signup">{{> "icons/email"}} Subscribe now</button>
-                </section>
-            {{/unless}}
-            {{/if}}
-
-            <nav class="gh-foot-menu">
-                {{navigation type="secondary"}}
-            </nav>
-
-            <div class="gh-copyright">
-                {{#unless @custom.footer_text}}
-                    {{@site.title}} © {{date format="YYYY"}}. Powered by <a href="https://ghost.org/" target="_blank" rel="noopener">Ghost</a>
-                {{else}}
-                    {{@custom.footer_text}}
-                {{/unless}}
-            </div>
-        </div>
-    </footer>
 
 </div>
 
