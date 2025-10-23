@@ -61,7 +61,6 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `jwt=${token}\n`);
           NODE
 
--      - name: Upload and activate theme
       - name: Upload theme
         id: upload
         env:
