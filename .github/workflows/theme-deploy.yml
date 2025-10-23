@@ -21,7 +21,14 @@ jobs:
           THEME_ROOT: headline-custom
         run: |
           TEMP_DIR=$(mktemp -d)
-          rsync -a theme/ "$TEMP_DIR/${THEME_ROOT}/"
+          rsync -a --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'node_modules/' \
+            --exclude 'yarn.lock' \
+            --exclude 'package-lock.json' \
+            --exclude 'npm-shrinkwrap.json' \
+            theme/ "$TEMP_DIR/${THEME_ROOT}/"
           (cd "$TEMP_DIR" && zip -qr "$GITHUB_WORKSPACE/theme.zip" "${THEME_ROOT}")
           rm -rf "$TEMP_DIR"
 
@@ -54,17 +61,77 @@ jobs:
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `jwt=${token}\n`);
           NODE
 
-      - name: Upload and activate theme
+-      - name: Upload and activate theme
+      - name: Upload theme
+        id: upload
         env:
           GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
-          THEME_NAME: headline-custom
         run: |
+          set -euo pipefail
+          RESPONSE_FILE=$(mktemp)
           curl -fSs -X POST "$GHOST_ADMIN_URL/ghost/api/admin/themes/upload/" \
             -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
             -H "Accept-Version: v5.0" \
-            -F "file=@theme.zip"
-          curl -fSs -X PUT "$GHOST_ADMIN_URL/ghost/api/admin/themes/${THEME_NAME}/activate/" \
+            -F "file=@theme.zip" \
+            -o "$RESPONSE_FILE"
+          cat "$RESPONSE_FILE"
+          THEME_SLUG=$(jq -r '.themes[0].name' "$RESPONSE_FILE")
+          PACKAGE_NAME=$(jq -r '.themes[0].package.name' "$RESPONSE_FILE")
+          rm -f "$RESPONSE_FILE"
+          if [ -z "$THEME_SLUG" ] || [ "$THEME_SLUG" = "null" ]; then
+            echo "Failed to parse theme slug from upload response" >&2
+            exit 1
+          fi
+          if [ -z "$PACKAGE_NAME" ] || [ "$PACKAGE_NAME" = "null" ]; then
+            echo "Failed to parse package name from upload response" >&2
+            exit 1
+          fi
+          echo "slug=$THEME_SLUG" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Activate theme
+        env:
+          GHOST_ADMIN_URL: ${{ secrets.GHOST_ADMIN_URL }}
+        run: |
+          set -euo pipefail
+          UPLOAD_SLUG="${{ steps.upload.outputs.slug }}"
+          PACKAGE_NAME="${{ steps.upload.outputs.package_name }}"
+          if [ -z "$UPLOAD_SLUG" ] || [ "$UPLOAD_SLUG" = "null" ]; then
+            echo "Missing theme slug from upload response" >&2
+            exit 1
+          fi
+          echo "Attempting to activate uploaded slug '$UPLOAD_SLUG'"
+          sleep 5
+          if ! curl -fSs -X PUT "$GHOST_ADMIN_URL/ghost/api/admin/themes/${UPLOAD_SLUG}/activate/" \
             -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
             -H "Accept-Version: v5.0" \
             -H "Content-Type: application/json" \
-            -d '{}'
+            -d '{}'; then
+            if [ -z "$PACKAGE_NAME" ] || [ "$PACKAGE_NAME" = "null" ]; then
+              echo "Direct activation failed and package name is unavailable for fallback." >&2
+              exit 1
+            fi
+            echo "Activation by slug failed; attempting to resolve slug via package '$PACKAGE_NAME'."
+            THEME_SLUG=""
+            for attempt in 1 2 3 4 5 6; do
+              THEMES_JSON=$(curl -fSs "$GHOST_ADMIN_URL/ghost/api/admin/themes/" \
+                -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
+                -H "Accept-Version: v5.0")
+              THEME_SLUG=$(echo "$THEMES_JSON" | jq -r --arg pkg "$PACKAGE_NAME" '.themes[] | select(.package.name==$pkg) | .name' | head -n1)
+              if [ -n "$THEME_SLUG" ] && [ "$THEME_SLUG" != "null" ]; then
+                break
+              fi
+              echo "Theme with package '$PACKAGE_NAME' not visible yet (attempt $attempt). Retrying..." >&2
+              sleep 5
+            done
+            if [ -z "$THEME_SLUG" ] || [ "$THEME_SLUG" = "null" ]; then
+              echo "Unable to resolve theme slug for package '$PACKAGE_NAME' after waiting." >&2
+              exit 1
+            fi
+            echo "Retrying activation with resolved slug '$THEME_SLUG'."
+            curl -fSs -X PUT "$GHOST_ADMIN_URL/ghost/api/admin/themes/${THEME_SLUG}/activate/" \
+              -H "Authorization: Ghost ${{ steps.jwt.outputs.jwt }}" \
+              -H "Accept-Version: v5.0" \
+              -H "Content-Type: application/json" \
+              -d '{}'
+          fi
